@@ -41,7 +41,7 @@ const config = Vite.defineConfig((): Vite.UserConfig => {
     return {
         base: "./",
         define: {
-            BUILD_MODE: JSON.stringify("production"),
+            BUILD_MODE: "production",
             CONDITION_SOURCES: JSON.stringify(CONDITION_SOURCES),
             EN_JSON: JSON.stringify(EN_JSON),
             ROLL_PARSER: JSON.stringify(ROLL_PARSER),

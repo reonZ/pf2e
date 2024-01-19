@@ -271,4 +271,10 @@ function toggleClearTemplatesButton(message: ChatMessagePF2e | null): void {
     }
 }
 
-export { applyDamageFromMessage, createSelfEffectMessage, isCheckContextFlag, toggleClearTemplatesButton };
+export {
+    applyDamageFromMessage,
+    createSelfEffectMessage,
+    isCheckContextFlag,
+    toggleClearTemplatesButton,
+    toggleOffShieldBlock,
+};

@@ -20,3 +20,6 @@ types/foundry/package-lock.json
 /styles/pf2e.css
 /pf2e.mjs
 /vendor.mjs
+
+# API specifics
+api/

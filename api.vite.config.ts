@@ -49,7 +49,7 @@ const config = Vite.defineConfig((): Vite.UserConfig => {
         },
         esbuild: { keepNames: true },
         build: {
-            outDir: "../scripts",
+            outDir: "api",
             emptyOutDir: true,
             minify: false,
             sourcemap: false,

@@ -2028,7 +2028,7 @@
                         "uuid": "Compendium.pf2e.classfeatures.Item.Exemplary Finisher"
                     },
                     "t02dj": {
-                        "img": "systems/pf2e/icons/features/classes/light-armor-expertise.webp",
+                        "img": "icons/equipment/back/mantle-collared-green.webp",
                         "level": 13,
                         "name": "Light Armor Expertise",
                         "uuid": "Compendium.pf2e.classfeatures.Item.Light Armor Expertise"
@@ -2579,6 +2579,15 @@
                                 }
                             ]
                         }
+                    },
+                    {
+                        "key": "ActiveEffectLike",
+                        "mode": "override",
+                        "path": "flags.pf2e.swashbuckler.preciseStrike",
+                        "predicate": [
+                            "class:swashbuckler"
+                        ],
+                        "value": "ceil(@actor.level/4) + 1"
                     }
                 ],
                 "slug": "precise-strike",

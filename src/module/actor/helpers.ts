@@ -336,16 +336,12 @@ function getStrikeDamageDomains(
         `${meleeOrRanged}-strike-damage`,
         `${meleeOrRanged}-damage`,
         `${unarmedOrWeapon}-damage`,
-        group ? `${group}-group-damage` : null,
+        group ? `${group}-weapon-group-damage` : null,
         baseType ? `${baseType}-base-damage` : null,
         "attack-damage",
         "strike-damage",
         "damage",
     ]);
-
-    if (weapon.group) {
-        domains.push(`${weapon.group}-weapon-group-damage`);
-    }
 
     if (weapon.baseType) {
         domains.push(`${weapon.baseType}-base-type-damage`);
@@ -552,6 +548,7 @@ function strikeFromMeleeItem(item: MeleePF2e<ActorPF2e>): NPCStrike {
                 rollTwice,
                 substitutions,
                 dosAdjustments,
+                createMessage: params.createMessage ?? true,
             };
             const roll = await CheckPF2e.roll(check, checkContext, params.event);
 
@@ -605,6 +602,7 @@ function strikeFromMeleeItem(item: MeleePF2e<ActorPF2e>): NPCStrike {
                 options: context.options,
                 domains,
                 traits: context.traits,
+                createMessage: params.createMessage ?? true,
                 ...eventToRollParams(params.event, { type: "damage" }),
             };
 

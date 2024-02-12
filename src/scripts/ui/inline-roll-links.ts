@@ -7,6 +7,7 @@ import { calculateDC } from "@module/dc.ts";
 import { eventToRollParams } from "@scripts/sheet-util.ts";
 import { CheckDC } from "@system/degree-of-success.ts";
 import { Statistic, StatisticRollParameters } from "@system/statistic/index.ts";
+import { TextEditorPF2e } from "@system/text-editor.ts";
 import { ErrorPF2e, getActionGlyph, htmlClosest, htmlQueryAll, objectHasKey, sluggify, tupleHasValue } from "@util";
 import { getSelectedActors } from "@util/token-actor-utils.ts";
 import * as R from "remeda";
@@ -91,8 +92,17 @@ export const InlineRollLinks = {
         }
 
         for (const link of links.filter((l) => l.dataset.pf2Check && !l.dataset.invalid)) {
-            const { pf2Check, pf2Dc, pf2Traits, pf2Label, pf2Defense, pf2Adjustment, pf2Roller, pf2RollOptions } =
-                link.dataset;
+            const {
+                pf2Check,
+                pf2Dc,
+                pf2Traits,
+                pf2Label,
+                pf2Defense,
+                pf2Adjustment,
+                pf2Roller,
+                pf2RollOptions,
+                overrideTraits,
+            } = link.dataset;
 
             if (!pf2Check) return;
 
@@ -127,6 +137,7 @@ export const InlineRollLinks = {
                     ...(pf2RollOptions?.split(",").map((o) => o.trim()) ?? []),
                 ];
                 const eventRollParams = eventToRollParams(event, { type: "check" });
+                const checkSlug = link.dataset.slug ? sluggify(link.dataset.slug) : null;
 
                 switch (pf2Check) {
                     case "flat": {
@@ -140,7 +151,7 @@ export const InlineRollLinks = {
                             const dc = Number.isInteger(Number(pf2Dc))
                                 ? { label: pf2Label, value: Number(pf2Dc) }
                                 : null;
-                            flatCheck.roll({ ...eventRollParams, extraRollOptions, dc });
+                            flatCheck.roll({ ...eventRollParams, slug: checkSlug, extraRollOptions, dc });
                         }
                         break;
                     }
@@ -154,7 +165,7 @@ export const InlineRollLinks = {
 
                         for (const actor of actors) {
                             const statistic = ((): Statistic | null => {
-                                if (pf2Check in CONFIG.PF2E.magicTraditions) {
+                                if (pf2Check in CONFIG.PF2E.magicTraditions && actor.isOfType("creature")) {
                                     const bestSpellcasting =
                                         actor.spellcasting
                                             .filter((c) => c.tradition === pf2Check)
@@ -227,6 +238,7 @@ export const InlineRollLinks = {
 
                             // Use a special header for checks against defenses
                             const itemIsEncounterAction =
+                                !overrideTraits &&
                                 !!(item?.isOfType("action", "feat") && item.actionCost) &&
                                 !["flat-check", "saving-throw"].includes(statistic.check.type);
                             if (itemIsEncounterAction) {
@@ -241,6 +253,7 @@ export const InlineRollLinks = {
                                     subtitle: game.i18n.format(subtitleLocKey, { type: statistic.label }),
                                     title: item.name,
                                 });
+                                extraRollOptions.push(...TextEditorPF2e.createActionOptions(item));
                             }
 
                             statistic.roll(args);
@@ -335,8 +348,8 @@ export const InlineRollLinks = {
     },
 
     makeRepostHtml: (target: HTMLElement, defaultVisibility: string): string => {
-        const flavor = target.attributes.getNamedItem("data-pf2-repost-flavor")?.value ?? "";
-        const showDC = target.attributes.getNamedItem("data-pf2-show-dc")?.value ?? defaultVisibility;
+        const flavor = game.i18n.localize(target.dataset.pf2RepostFlavor ?? "");
+        const showDC = target.dataset.pf2ShowDc ?? defaultVisibility;
         return `<span data-visibility="${showDC}">${flavor}</span> ${target.outerHTML}`.trim();
     },
 

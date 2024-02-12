@@ -63,7 +63,7 @@
                 },
                 "items": {
                     "osb2w": {
-                        "img": "systems/pf2e/icons/features/feats/feats.webp",
+                        "img": "icons/sundries/books/book-red-exclamation.webp",
                         "level": 1,
                         "name": "Crafter's Appraisal",
                         "uuid": "Compendium.pf2e.feats-srd.Item.Crafter's Appraisal"
@@ -824,7 +824,7 @@
                 "bulk": {
                     "value": 0.1
                 },
-                "containerId": "null",
+                "containerId": null,
                 "description": {
                     "value": "<p>This kit contains cleaning cloth, oil, small steel brushes, and other minor tools necessary for proper cleaning and maintenance of a firearm. Without a firearm cleaning kit, you can't perform the necessary tasks during your daily preparations to ensure that your firearm isn't at risk of misfiring under normal use conditions.</p>"
                 },
@@ -1029,7 +1029,7 @@
                     "value": 0.1
                 },
                 "category": "ammo",
-                "containerId": "null",
+                "containerId": null,
                 "damage": null,
                 "description": {
                     "value": "<p>Ammunition for the @UUID[Compendium.pf2e.equipment-srd.Item.Spoon Gun]</p>\n<p>Users typically upend the entire contents of their cutlery drawer into the gun, aim it in the general direction of the foe, and hope it hits something.</p>"
@@ -1767,7 +1767,7 @@
                         "key": "Note",
                         "selector": "initiative",
                         "text": "{item|system.description.value}",
-                        "title": "<span class=\"pf2-icon\">F</span> {item|name}"
+                        "title": "<span class=\"action-glyph\">F</span> {item|name}"
                     }
                 ],
                 "slug": "ten-paces",

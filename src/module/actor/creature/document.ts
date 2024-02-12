@@ -2,14 +2,20 @@ import { ActorPF2e, type PartyPF2e } from "@actor";
 import { HitPointsSummary } from "@actor/base.ts";
 import { CreatureSource } from "@actor/data/index.ts";
 import { MODIFIER_TYPES, ModifierPF2e, RawModifier, StatisticModifier } from "@actor/modifiers.ts";
+import { ActorSpellcasting } from "@actor/spellcasting.ts";
 import { MovementType, SaveType, SkillLongForm } from "@actor/types.ts";
 import { ArmorPF2e, ItemPF2e, type PhysicalItemPF2e, type ShieldPF2e } from "@item";
 import { ArmorSource, ItemType } from "@item/base/data/index.ts";
 import { isContainerCycle } from "@item/container/helpers.ts";
 import { EquippedData, ItemCarryType } from "@item/physical/data.ts";
 import { isEquipped } from "@item/physical/usage.ts";
+import { SpellCollection } from "@item/spellcasting-entry/collection.ts";
+import { ItemSpellcasting } from "@item/spellcasting-entry/item-spellcasting.ts";
+import { RitualSpellcasting } from "@item/spellcasting-entry/rituals.ts";
+import { SpellcastingEntry } from "@item/spellcasting-entry/types.ts";
 import type { ActiveEffectPF2e } from "@module/active-effect.ts";
-import { Rarity, SIZES, SIZE_SLUGS, ZeroToTwo } from "@module/data.ts";
+import { ItemAttacher } from "@module/apps/item-attacher.ts";
+import { Rarity, SIZES, SIZE_SLUGS, ZeroToFour, ZeroToTwo } from "@module/data.ts";
 import { RollNotePF2e } from "@module/notes.ts";
 import { extractModifiers } from "@module/rules/helpers.ts";
 import { BaseSpeedSynthetic } from "@module/rules/synthetics.ts";
@@ -19,6 +25,7 @@ import type { TokenDocumentPF2e } from "@scene/index.ts";
 import { eventToRollParams } from "@scripts/sheet-util.ts";
 import type { CheckRoll } from "@system/check/index.ts";
 import { CheckDC } from "@system/degree-of-success.ts";
+import { PredicatePF2e } from "@system/predication.ts";
 import { Statistic, StatisticDifficultyClass, type ArmorStatistic } from "@system/statistic/index.ts";
 import { PerceptionStatistic } from "@system/statistic/perception.ts";
 import { ErrorPF2e, localizer, setHasElement } from "@util";
@@ -26,12 +33,14 @@ import * as R from "remeda";
 import { CreatureSkills, CreatureSpeeds, CreatureSystemData, LabeledSpeed, VisionLevel, VisionLevels } from "./data.ts";
 import { imposeEncumberedCondition, setImmunitiesFromTraits } from "./helpers.ts";
 import { CreatureTrait, CreatureType, CreatureUpdateContext, GetReachParameters } from "./types.ts";
-import { SIZE_TO_REACH } from "./values.ts";
 
 /** An "actor" in a Pathfinder sense rather than a Foundry one: all should contain attributes and abilities */
 abstract class CreaturePF2e<
     TParent extends TokenDocumentPF2e | null = TokenDocumentPF2e | null,
 > extends ActorPF2e<TParent> {
+    /** A separate collection of owned spellcasting entries for convenience */
+    declare spellcasting: ActorSpellcasting<this>;
+
     declare parties: Set<PartyPF2e>;
     /** A creature always has an AC */
     declare armorClass: StatisticDifficultyClass<ArmorStatistic>;
@@ -148,7 +157,7 @@ abstract class CreaturePF2e<
     }
 
     get isSpellcaster(): boolean {
-        const { itemTypes } = this;
+        const itemTypes = this.itemTypes;
         return itemTypes.spellcastingEntry.length > 0 && itemTypes.spell.length > 0;
     }
 
@@ -271,6 +280,38 @@ abstract class CreaturePF2e<
             },
         });
 
+        // Add spell collections from spell consumables if a matching spellcasting ability is found
+        const spellConsumables = this.itemTypes.consumable.filter(
+            (c) => ["scroll", "wand"].includes(c.category) && c.isIdentified && !c.isStowed,
+        );
+        for (const consumable of spellConsumables) {
+            const spell = consumable.embeddedSpell;
+            if (!spell?.id) continue;
+            const ability = this.spellcasting
+                .filter((e): e is SpellcastingEntry<this> => !!e.statistic && e.canCast(spell, { origin: consumable }))
+                .reduce(
+                    (best: SpellcastingEntry<this> | null, e) =>
+                        best === null ? e : e.statistic.dc.value > best.statistic.dc.value ? e : best,
+                    null,
+                );
+            if (ability) {
+                const collectionId = `${consumable.id}-casting`;
+                const itemCasting = new ItemSpellcasting({
+                    id: collectionId,
+                    name: consumable.name,
+                    actor: this,
+                    statistic: ability.statistic,
+                    tradition: ability.tradition ?? spell.traditions.first() ?? null,
+                    castPredicate: new PredicatePF2e([`item:id:${consumable.id}`, `spell:id:${spell.id}`]),
+                });
+                spell.system.location.value = itemCasting.id;
+                const collection = new SpellCollection(itemCasting);
+                collection.set(spell.id, spell);
+                this.spellcasting.set(itemCasting.id, itemCasting);
+                this.spellcasting.collections.set(collectionId, collection);
+            }
+        }
+
         for (const party of this.parties) {
             party.reset({ actor: true });
         }
@@ -337,10 +378,35 @@ abstract class CreaturePF2e<
         }
 
         for (const changeEntries of Object.values(this.system.autoChanges)) {
-            changeEntries?.sort((a, b) => (Number(a.level) > Number(b.level) ? 1 : -1));
+            changeEntries?.sort((a, b) => (a.level ?? 0) - (b.level ?? 0));
         }
 
         this.rollOptions.all[`self:mode:${this.modeOfBeing}`] = true;
+
+        // PC1 p.298, When you gain an innate spell, you become trained in the spell attack modifier
+        // and spell DC statistics. At 12th level, these proficiencies increase to expert.
+        if (this.isOfType("character") && this.spellcasting.some((e) => e.isInnate)) {
+            const spellcasting = this.system.proficiencies.spellcasting;
+            spellcasting.rank = Math.max(spellcasting.rank, this.level >= 12 ? 2 : 1) as ZeroToFour;
+        }
+
+        // Base spellcasting proficiency (later extended to add attribute modifiers)
+        this.spellcasting.base = new Statistic(this, {
+            slug: "base-spellcasting",
+            label: "PF2E.Actor.Creature.Spellcasting.Label",
+            rank: this.isOfType("character") ? this.system.proficiencies.spellcasting.rank : 1,
+            domains: ["all", "spell-attack-dc"],
+            check: { type: "attack-roll" },
+        });
+    }
+
+    protected override prepareDataFromItems(): void {
+        this.spellcasting = new ActorSpellcasting(this, [
+            ...this.itemTypes.spellcastingEntry,
+            new RitualSpellcasting(this),
+        ]);
+
+        super.prepareDataFromItems();
     }
 
     override prepareDerivedData(): void {
@@ -354,17 +420,9 @@ abstract class CreaturePF2e<
             }
         }
 
-        // Set minimum reach according to creature size
         const { attributes, rollOptions } = this;
-        const reachFromSize = SIZE_TO_REACH[this.size];
-        attributes.reach.base = Math.max(attributes.reach.base, reachFromSize);
-        attributes.reach.manipulate = Math.max(attributes.reach.manipulate, attributes.reach.base, reachFromSize);
 
         // Add creature-specific self: roll options
-        if (this.isSpellcaster) {
-            rollOptions.all["self:caster"] = true;
-        }
-
         if (this.hitPoints.negativeHealing) {
             rollOptions.all["self:negative-healing"] = true;
         }
@@ -372,13 +430,16 @@ abstract class CreaturePF2e<
         // Set whether this actor is wearing armor
         rollOptions.all["self:armored"] = !!this.wornArmor && this.wornArmor.category !== "unarmored";
 
+        // Start with a baseline reach of 5 feet: melee attacks with reach can adjust it
+        this.system.attributes.reach = { base: 5, manipulate: 5 };
+
         // Set whether the actor's shield is raised
         if (attributes.shield?.raised && !attributes.shield.broken && !attributes.shield.destroyed) {
-            this.rollOptions.all["self:shield:raised"] = true;
+            rollOptions.all["self:shield:raised"] = true;
         }
 
         // Set whether this creature emits sound
-        this.system.attributes.emitsSound = !this.isDead;
+        attributes.emitsSound = !this.isDead;
 
         this.prepareSynthetics();
 
@@ -405,6 +466,11 @@ abstract class CreaturePF2e<
             const { focus } = this.system.resources;
             focus.max = Math.clamped(Math.floor(focus.max), 0, focus.cap) || 0;
             focus.value = Math.clamped(Math.floor(focus.value), 0, focus.max) || 0;
+        }
+
+        // Disallow creatures not in either alliance to flank
+        if (this.system.details.alliance === null) {
+            attributes.flanking.canFlank = false;
         }
 
         imposeEncumberedCondition(this);
@@ -435,6 +501,8 @@ abstract class CreaturePF2e<
                 (c) => c !== item.container && !isContainerCycle(item, c),
             );
             if (container) await item.actor.stowOrUnstow(item, container);
+        } else if (carryType === "attached" && item.quantity > 0) {
+            await new ItemAttacher({ item }).resolveSelection();
         } else {
             const equipped: EquippedData = {
                 carryType: carryType,
@@ -636,8 +704,12 @@ abstract class CreaturePF2e<
                 : ["speed", "all-speeds", `${movementType}-speed`];
             const rollOptions = this.getRollOptions(domains);
 
-            const label = game.i18n.localize(CONFIG.PF2E.speedTypes[movementType]);
-            const speed: LabeledSpeed = { type: movementType, label, value: fastest.value };
+            const speed: LabeledSpeed = {
+                type: movementType,
+                label: game.i18n.localize(CONFIG.PF2E.speedTypes[movementType]),
+                value: fastest.value,
+                derivedFromLand: fastest.derivedFromLand,
+            };
             if (fastest.source) speed.source = fastest.source;
 
             this.rollOptions.all[`speed:${movementType}`] = true;

@@ -122,6 +122,10 @@ interface GamePF2e
         TextEditor: typeof TextEditorPF2e;
         /** Cached values of frequently-checked settings */
         settings: {
+            automation: {
+                /** Flanking detection */
+                flanking: boolean;
+            };
             /** Campaign feat slots */
             campaign: {
                 enabled: boolean;
@@ -225,7 +229,8 @@ declare global {
             ItemDirectory<ItemPF2e<null>>,
             ChatLogPF2e,
             CompendiumDirectoryPF2e,
-            EncounterTrackerPF2e<EncounterPF2e | null>
+            EncounterTrackerPF2e<EncounterPF2e | null>,
+            HotbarPF2e
         >;
 
         // Add functions to the `Math` namespace for use in `Roll` formulas

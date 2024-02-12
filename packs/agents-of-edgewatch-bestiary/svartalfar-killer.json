@@ -1138,7 +1138,7 @@
                 "containerId": null,
                 "damage": null,
                 "description": {
-                    "value": "<p>The opaque white sap from the graveroot shrub clouds the mind.</p>\n<hr />\n<p><strong>Activate</strong> <span class=\"action-glyph\">D</span> Interact (Injury)</p>\n<p><strong>Saving Throw</strong> @Check[type:fortitude|dc:19]</p>\n<p><strong>Maximum Duration</strong> 4 rounds</p>\n<p><strong>Stage 1</strong> @Damage[1d10[poison]] damage (1 round)</p>\n<p><strong>Stage 2</strong> @Damage[1d12[poison]] damage and @UUID[Compendium.pf2e.conditionitems.Item.Stupefied]{Stupefied 1} (1 round)</p>\n<p><strong>Stage 3</strong> @Damage[2d6[poison]] damage and stupefied 2 (1 round)</p>"
+                    "value": "<p>The opaque white sap from the graveroot shrub clouds the mind.</p>\n<hr />\n<p><strong>Activate</strong> <span class=\"action-glyph\">2</span> Interact (Injury)</p>\n<p><strong>Saving Throw</strong> @Check[type:fortitude|dc:19]</p>\n<p><strong>Maximum Duration</strong> 4 rounds</p>\n<p><strong>Stage 1</strong> @Damage[1d10[poison]] damage (1 round)</p>\n<p><strong>Stage 2</strong> @Damage[1d12[poison]] damage and @UUID[Compendium.pf2e.conditionitems.Item.Stupefied]{Stupefied 1} (1 round)</p>\n<p><strong>Stage 3</strong> @Damage[2d6[poison]] damage and stupefied 2 (1 round)</p>"
                 },
                 "equipped": {
                     "carryType": "worn",
@@ -1422,7 +1422,7 @@
                 },
                 "category": "offensive",
                 "description": {
-                    "value": "<p>The svartalfar killer chooses <em>@UUID[Compendium.pf2e.spells-srd.Item.Acid Splash]</em>, <em>@UUID[Compendium.pf2e.spells-srd.Item.Produce Flame]</em>, <em>@UUID[Compendium.pf2e.spells-srd.Item.Enfeeble]</em>, or <em>@UUID[Compendium.pf2e.spells-srd.Item.Shocking Grasp]</em> and makes a melee Strike.</p>\n<p>If the svartalfar killer hits, they cast the chosen spell through the weapon at the same target. The spell's attack roll is the same result as the Strike.</p>"
+                    "value": "<p>The svartalfar killer chooses @UUID[Compendium.pf2e.spells-srd.Item.Acid Splash], @UUID[Compendium.pf2e.spells-srd.Item.Produce Flame], @UUID[Compendium.pf2e.spells-srd.Item.Enfeeble], or @UUID[Compendium.pf2e.spells-srd.Item.Shocking Grasp] and makes a melee Strike.</p>\n<p>If the svartalfar killer hits, they cast the chosen spell through the weapon at the same target. The spell's attack roll is the same result as the Strike.</p>"
                 },
                 "publication": {
                     "license": "OGL",

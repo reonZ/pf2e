@@ -38,7 +38,7 @@
                 },
                 "items": {
                     "jzu36": {
-                        "img": "systems/pf2e/icons/features/feats/feats.webp",
+                        "img": "icons/sundries/books/book-red-exclamation.webp",
                         "level": 1,
                         "name": "Additional Lore",
                         "uuid": "Compendium.pf2e.feats-srd.Item.Additional Lore"
@@ -687,7 +687,7 @@
                     "sourceId": "Compendium.pf2e.equipment-srd.Item.Du05UxCyCM0ZWH8z"
                 }
             },
-            "img": "systems/pf2e/icons/equipment/adventuring-gear/oil.webp",
+            "img": "icons/consumables/potions/potion-bottle-labeled-medicine-capped-red-black.webp",
             "name": "Oil (1 pint)",
             "sort": 100000,
             "system": {
@@ -1722,7 +1722,7 @@
                         "uuid": "Compendium.pf2e.classfeatures.Item.Perpetual Infusions"
                     },
                     "0q0he": {
-                        "img": "systems/pf2e/icons/features/classes/light-armor-expertise.webp",
+                        "img": "icons/equipment/back/mantle-collared-green.webp",
                         "level": 13,
                         "name": "Alchemist Armor Expertise (Level 13)",
                         "uuid": "Compendium.pf2e.classfeatures.Item.Alchemist Armor Expertise (Level 13)"

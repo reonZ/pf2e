@@ -2,6 +2,7 @@ import type { ActorPF2e } from "@actor";
 import { FormulaPicker } from "@actor/character/apps/formula-picker/app.ts";
 import type { ChatMessageMode } from "@client/config.d.mts";
 import type { AbilityItemPF2e, FeatPF2e, ItemPF2e } from "@item";
+import { USE_ABILITY_OPTION } from "@item/ability/values.ts";
 import { extractEphemeralEffects } from "@module/rules/helpers.ts";
 import { DamageRoll } from "@system/damage/roll.ts";
 import { ErrorPF2e, getActionGlyph, htmlQuery, htmlQueryAll, tupleHasValue } from "@util";
@@ -43,7 +44,7 @@ async function createUseActionMessage(
 
     // If there is no self effect nor crafted item, show a regular message
     if (!item.system.selfEffect && !craftedItem) {
-        return (await item.toMessage(null, { mode: messageMode })) ?? null;
+        return (await item.toMessage(null, { actualUse: true, mode: messageMode })) ?? null;
     }
 
     const speaker = ChatMessagePF2e.getSpeaker({ actor, token });
@@ -65,11 +66,14 @@ async function createUseActionMessage(
         activate: craftedItem?.type === "consumable" && craftedItem.system.usage.type === "held" ? craftedItem : null,
         strike: craftedItem?.isOfType("weapon") ? actor.system.actions?.find((a) => a.item === craftedItem) : null,
     });
-    const flags: { [SYSTEM_ID]: ChatMessageFlagsPF2e[SystemId] } = { [SYSTEM_ID]: {} };
+    const originData = item.getOriginData();
+    // We indicate that the action was actually used
+    originData.rollOptions?.push(USE_ABILITY_OPTION);
+    const flags: { [SYSTEM_ID]: ChatMessageFlagsPF2e[SystemId] } = {
+        [SYSTEM_ID]: { origin: originData },
+    };
     if (item.system.selfEffect) {
         flags[SYSTEM_ID].context = { type: "self-effect", item: item.id };
-    } else {
-        flags[SYSTEM_ID].origin = item.getOriginData();
     }
 
     // Create the message

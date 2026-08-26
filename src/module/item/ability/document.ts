@@ -1,15 +1,18 @@
 import type { ActorPF2e } from "@actor";
 import type { CraftingAbility } from "@actor/character/crafting/ability.ts";
+import { ChatMessageMode } from "@client/config.mjs";
 import type { DatabaseCreateCallbackOptions, DatabaseUpdateCallbackOptions } from "@common/abstract/_types.d.mts";
 import { ItemPF2e } from "@item";
 import type { ActionCost, Frequency, RawItemChatData } from "@item/base/data/index.ts";
 import type { RangeData } from "@item/types.ts";
+import { ChatMessagePF2e } from "@module/chat-message/document.ts";
 import type { RuleElement, RuleElementOptions } from "@module/rules/index.ts";
 import { EnrichmentOptionsPF2e } from "@system/text-editor.ts";
 import { sluggify } from "@util";
 import type { AbilitySource, AbilitySystemData } from "./data.ts";
 import { getActionCostRollOptions, normalizeActionChangeData, processSanctification } from "./helpers.ts";
 import type { AbilityTrait } from "./types.ts";
+import { USE_ABILITY_OPTION } from "./values.ts";
 
 class AbilityItemPF2e<TParent extends ActorPF2e | null = ActorPF2e | null> extends ItemPF2e<TParent> {
     declare range?: RangeData | null;
@@ -74,6 +77,33 @@ class AbilityItemPF2e<TParent extends ActorPF2e | null = ActorPF2e | null> exten
         return rollOptions;
     }
 
+    override async toMessage(
+        event?: Maybe<PointerEvent>,
+        { actualUse = false, create = true, data, mode }: AbilityToMessageOptions = {},
+    ): Promise<ChatMessagePF2e | undefined> {
+        // We don't want to double the work if we have nothing to add
+        if (!actualUse) {
+            return super.toMessage(event, { create, data, mode });
+        }
+
+        const message = await super.toMessage(event, { create: false, data, mode });
+        if (!message) return undefined;
+
+        const messageSource = message.toObject();
+        const flags = messageSource.flags[SYSTEM_ID];
+        // The ability was actually used and not simply sent to chat.
+        if (actualUse && flags.origin?.rollOptions) {
+            flags.origin.rollOptions.push(USE_ABILITY_OPTION);
+        }
+
+        if (!create) {
+            message.updateSource(messageSource);
+            return message;
+        }
+
+        return ChatMessagePF2e.create(messageSource, { renderSheet: false });
+    }
+
     /** Overriden to not create rule elements when suppressed */
     override prepareRuleElements(options?: Omit<RuleElementOptions, "parent">): RuleElement[] {
         if (this.suppressed) return [];
@@ -119,4 +149,12 @@ interface AbilityItemPF2e<TParent extends ActorPF2e | null = ActorPF2e | null> e
     system: AbilitySystemData;
 }
 
+interface AbilityToMessageOptions {
+    actualUse?: boolean;
+    create?: boolean;
+    mode?: ChatMessageMode;
+    data?: { castRank?: number };
+}
+
 export { AbilityItemPF2e };
+export type { AbilityToMessageOptions };

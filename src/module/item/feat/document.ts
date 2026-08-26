@@ -6,8 +6,11 @@ import type { SenseData } from "@actor/creature/index.ts";
 import type { DocumentHTMLEmbedConfig } from "@client/applications/ux/text-editor.d.mts";
 import type { DatabaseCreateCallbackOptions, DatabaseUpdateCallbackOptions } from "@common/abstract/_types.d.mts";
 import { ItemPF2e, type HeritagePF2e } from "@item";
+import { AbilityToMessageOptions } from "@item/ability/document.ts";
 import { getActionCostRollOptions, normalizeActionChangeData, processSanctification } from "@item/ability/helpers.ts";
+import { USE_ABILITY_OPTION } from "@item/ability/values.ts";
 import { ActionCost, Frequency, RawItemChatData } from "@item/base/data/index.ts";
+import { ChatMessagePF2e } from "@module/chat-message/document.ts";
 import { Rarity } from "@module/data.ts";
 import { RuleElement, RuleElementOptions, RuleElementSource } from "@module/rules/index.ts";
 import { EnrichmentOptionsPF2e } from "@system/text-editor.ts";
@@ -349,6 +352,33 @@ class FeatPF2e<TParent extends ActorPF2e | null = ActorPF2e | null> extends Item
         return rollOptions;
     }
 
+    override async toMessage(
+        event?: Maybe<PointerEvent>,
+        { actualUse = false, create = true, data, mode }: FeatToMessageOptions = {},
+    ): Promise<ChatMessagePF2e | undefined> {
+        // We don't want to double the work if we have nothing to add
+        if (!actualUse || !this.actionCost) {
+            return super.toMessage(event, { create, data, mode });
+        }
+
+        const message = await super.toMessage(event, { create: false, data, mode });
+        if (!message) return undefined;
+
+        const messageSource = message.toObject();
+        const flags = messageSource.flags[SYSTEM_ID];
+        // The feat action was actually used and not simply sent to chat.
+        if (actualUse && flags.origin?.rollOptions) {
+            flags.origin.rollOptions.push(USE_ABILITY_OPTION);
+        }
+
+        if (!create) {
+            message.updateSource(messageSource);
+            return message;
+        }
+
+        return ChatMessagePF2e.create(messageSource, { renderSheet: false });
+    }
+
     protected override embedHTMLString(config: DocumentHTMLEmbedConfig & { hr?: boolean }): string {
         const list = this.system.prerequisites?.value?.map((item) => item.value).join(", ") ?? "";
         return (
@@ -458,5 +488,7 @@ interface FeatPF2e<TParent extends ActorPF2e | null = ActorPF2e | null> extends 
     /** Interface alignment with other "attack items" */
     readonly range?: never;
 }
+
+interface FeatToMessageOptions extends AbilityToMessageOptions {}
 
 export { FeatPF2e };
